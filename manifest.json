@@ -3,7 +3,7 @@
     "name": "Voice AI Assistant",
     "version": "1.0",
     "description": "A browser extension that listens to voice and uses WebLLM to respond.",
-    "permissions": ["storage", "activeTab", "scripting"],
+    "permissions": ["storage", "activeTab", "scripting", "tabs"],
     "host_permissions": ["http://*/*", "https://*/*"],
     "background": {
       "service_worker": "background.js"

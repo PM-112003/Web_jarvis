@@ -5,7 +5,7 @@ document.getElementById("start").addEventListener("click", () => {
 
     recognition.onresult = (event) => {
         let text = event.results[0][0].transcript;
-        document.getElementById("inputText").innerText = text;
+        document.getElementById("inputText").innerText = text ;
         
         // Send text to background script for processing
         chrome.runtime.sendMessage({ action: "processText", text: text });

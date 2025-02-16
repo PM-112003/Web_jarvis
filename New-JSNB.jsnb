@@ -1,0 +1,50 @@
+{
+  "metadata": {
+    "name": "New JSNB",
+    "language_info": {
+      "name": "JavaScipt",
+      "version": "8.0"
+    }
+  },
+  "jsnbversion": "v0.1",
+  "cells": [
+    {
+      "code": "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Voice AI Assistant</title>\n    <link rel=\"stylesheet\" href=\"styles.css\">\n</head>\n<body>\n    <h1>Voice AI Assistant</h1>\n    <button id=\"start\">Start Voice Input</button>\n    <div id=\"inputText\"></div>\n    <div id=\"outputText\"></div>\n    <script src=\"popup.js\"></script>\n</body>\n</html>\n",
+      "status": "",
+      "output": "\n\n\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Voice AI Assistant</title>\n    <link rel=\"stylesheet\" href=\"styles.css\">\n\n\n    <h1>Voice AI Assistant</h1>\n    <button id=\"start\">Start Voice Input</button>\n    <div id=\"inputText\"></div>\n    <div id=\"outputText\"></div>\n    <script src=\"popup.js\"></script>\n\n\n",
+      "type": "html"
+    },
+    {
+      "code": "document.getElementById(\"start\").addEventListener(\"click\", () => {\n    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();\n    recognition.lang = \"en-US\";\n    recognition.start();\n\n    recognition.onresult = (event) => {\n        let text = event.results[0][0].transcript;\n        document.getElementById(\"inputText\").innerText = text;\n        \n        // Send text to another script using window.postMessage\n        window.postMessage({ action: \"processText\", text: text }, \"*\");\n    };\n\n    recognition.onerror = (event) => {\n        console.error(\"Speech recognition error:\", event.error);\n    };\n});\n\n// Listen for AI response using window event listener\nwindow.addEventListener(\"message\", (event) => {\n    if (event.data && event.data.action === \"displayOutput\") {\n        document.getElementById(\"outputText\").innerText = event.data.text;\n    }\n});\n",
+      "status": "[1]<br><span style=\"font-size:8px\">0ms<span></span></span>",
+      "output": "",
+      "type": "code"
+    },
+    {
+      "code": "// Open (or create) an IndexedDB database\nfunction openDatabase() {\n    return new Promise((resolve, reject) => {\n        let request = indexedDB.open(\"MyDatabase\", 1);\n\n        request.onupgradeneeded = function(event) {\n            let db = event.target.result;\n            if (!db.objectStoreNames.contains(\"settings\")) {\n                db.createObjectStore(\"settings\", { keyPath: \"key\" });\n            }\n        };\n\n        request.onsuccess = function(event) {\n            resolve(event.target.result);\n        };\n\n        request.onerror = function(event) {\n            reject(\"Database error: \" + event.target.errorCode);\n        };\n    });\n}\n\n// Store API key in IndexedDB\nfunction storeApiKey(apiKey) {\n    openDatabase().then(db => {\n        let transaction = db.transaction(\"settings\", \"readwrite\");\n        let store = transaction.objectStore(\"settings\");\n        store.put({ key: \"apiKey\", value: apiKey });\n    });\n}\n\n// Retrieve API key from IndexedDB\nfunction getApiKey() {\n    return new Promise((resolve, reject) => {\n        openDatabase().then(db => {\n            let transaction = db.transaction(\"settings\", \"readonly\");\n            let store = transaction.objectStore(\"settings\");\n            let request = store.get(\"apiKey\");\n\n            request.onsuccess = function() {\n                if (request.result) {\n                    resolve(request.result.value);\n                } else {\n                    reject(\"API Key not found!\");\n                }\n            };\n\n            request.onerror = function() {\n                reject(\"Error retrieving API key!\");\n            };\n        });\n    });\n}\n\n// Store the API key when the script loads (only once)\nstoreApiKey(scrib.getSecret(apiKey));\n\n// Listen for messages from content scripts\nwindow.addEventListener(\"message\", (event) => {\n    if (event.data && event.data.action === \"processText\") {\n        const text = event.data.text;\n\n        getApiKey()\n            .then(API_KEY => {\n                return fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${API_KEY}`, {\n                    method: \"POST\",\n                    headers: { \"Content-Type\": \"application/json\" },\n                    body: JSON.stringify({\n                        contents: [{\n                            parts: [{\n                                text: `You are an AI agent. Extract the user’s intent from their request and return a JSON object with a \"command\" field.\n                                If they ask to open/fetch/search a website, return: [{ \"command\": \"open\", \"url\": \"https://example.com\" }].\n                                If they ask to search something, return: [{ \"command\": \"search\", \"query\": \"search term\" }].\n                                If they ask to close the tab or exit, return: [{ \"command\": \"close_tab\" }].\n                                If they ask to open settings, return: [{ \"command\": \"open_settings\" }].\n                                If they ask to search on YouTube, return: [{ \"command\": \"youtube_search\", \"query\": \"search term\"}].\n                                If unclear, return: [{ \"command\": \"unknown\" }].\n                                User request: \"${text}\"`  \n                            }]\n                        }]\n                    })\n                });\n            })\n            .then(response => response.json())\n            .then(data => {\n                let aiResponse = data?.candidates?.[0]?.content?.parts?.[0]?.text || \"[]\";\n                console.log(\"Parsed AI Response:\", aiResponse);\n\n                const commandsArray = JSON.parse(aiResponse);\n                processAICommands(commandsArray);\n            })\n            .catch(error => {\n                console.error(\"Error:\", error);\n                window.postMessage({ action: \"displayOutput\", text: \"Error fetching AI response.\" }, \"*\");\n            });\n    }\n});\n\n// Process AI commands\nasync function processAICommands(commands) {\n    for (const commandData of commands) {\n        await executeCommand(commandData);\n    }\n}\n\n// Execute commands\nfunction executeCommand(commandData) {\n    return new Promise((resolve) => {\n        if (commandData.command === \"open\" && commandData.url) {\n            window.open(commandData.url, \"_blank\");\n        } \n        else if (commandData.command === \"youtube_search\" && commandData.query) {\n            window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(commandData.query)}`, \"_blank\");\n        }    \n        else if (commandData.command === \"search\" && commandData.query) {\n            const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(commandData.query)}`;\n            window.open(searchUrl, \"_blank\");\n        }\n        else if (commandData.command === \"close_tab\") {\n            window.close(); // Closes the current tab\n        }\n        else if (commandData.command === \"open_settings\") {\n            window.open(\"chrome://settings/\", \"_blank\");\n        }\n        else {\n            console.log(\"Unknown command:\", commandData);\n        }\n        resolve();\n    });\n}\n",
+      "status": "[-]",
+      "output": "<p class=\"error\">apiKey is not defined</p>",
+      "type": "code"
+    },
+    {
+      "code": "",
+      "status": "",
+      "output": "",
+      "type": "code"
+    },
+    {
+      "code": "<style>\n\n</style>",
+      "status": "",
+      "output": "",
+      "type": ""
+    },
+    {
+      "code": "<style>\n\n</style>",
+      "status": "",
+      "output": "",
+      "type": ""
+    }
+  ],
+  "source": "https://github.com/gopi-suvanam/scribbler",
+  "run_on_load": false
+}

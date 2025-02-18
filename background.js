@@ -1,5 +1,5 @@
 chrome.runtime.onInstalled.addListener(() => {
-    chrome.storage.local.set({ apiKey: "Your gemini api key here" });
+    chrome.storage.local.set({ apiKey: "Api key here" });
 });
 
 
@@ -35,7 +35,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
                                 If they ask to close the tab or exit from the current tab, return: [{ "command": "close_tab" }].
                                 If they ask to open chrome settings, return: [{ "command": "open_settings" }].
                                 If they ask to search something inside youtube, return: [{ "command": "youtube_search", "query": "search name that user asked for"}]
-                                If their request is unclear, return: [{ "command": "unknown" }].
+                                If they ask some information, then return: [{ "command": "info", "ans": "correct answer from gemini in text in <30 words and must give a link to the website it searched for furthur details"}].
+                                If their request is unclear, return: [{ "command": "unknown", "ans":"express your inability to perform that command in about 20 words only, tell user that you can only perform searching and opening website tasks" }].
                                 Do NOT add any extra text. 
                                 User request: "${text}"`
                             }]
@@ -99,7 +100,13 @@ function executeCommand(commandData) {
             chrome.tabs.create({ url: "chrome://settings/" });
     
         }
-        else {
+        else if (commandData.command === "info"){
+            let sometext = commandData.ans;
+            chrome.runtime.sendMessage({ action: "displayOutput", text: sometext });
+        }
+        else if(commandData.command === "unknown") {
+            let text = commandData.ans;
+            chrome.runtime.sendMessage({ action: "displayOutput", text: text });
             console.log("Unknown command:", commandData);
             resolve();
         }
